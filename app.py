@@ -56,6 +56,7 @@ def index():
     for key, value in request.headers:
         res += key + ": " + value + "<br>"
     res += "Data: " + request.data.decode("utf-8") + "<br>"
+    return res
 
 def get_or_create_user(line_user_id):
     user = users_collection.find_one({"line_user_id": line_user_id})
