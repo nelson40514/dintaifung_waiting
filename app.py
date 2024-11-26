@@ -24,6 +24,8 @@ from linebot.v3.messaging import (
 )
 from linebot.v3.webhooks import (
     MessageEvent,
+    JoinEvent,
+    FollowEvent,
     TextMessageContent
 )
 
@@ -65,7 +67,7 @@ def get_or_create_user(line_user_id):
             "line_user_id": line_user_id,
             "created_at": datetime.now(),
             "updated_at": datetime.now(),
-            "notifies": []
+            "notifies": {}
         }
         users_collection.insert_one(user)
     return user
@@ -104,12 +106,39 @@ def get_quick_reply_menu():
             QuickReplyItem(
                 action=MessageAction(label="顯示通知清單", text="/list")
             ),
-            QuickReplyItem(
-                action=MessageAction(label="刪除通知目標", text="/delete")
-            ),
+            # QuickReplyItem(
+            #     action=MessageAction(label="刪除通知目標", text="/delete")
+            # ),
         ]
     )
     return quick_reply
+
+def welcomeReplyMessage():
+    return ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[
+                    TextMessage(
+                        text="歡迎加入Dintaifung等待機器人\n輸入\\create建立等候清單\n輸入list查看等候清單\n或點選下方快速回復選項",
+                        quickReply=get_quick_reply_menu()
+                    ),
+                ]
+            )
+
+@lineHandler.add(JoinEvent)
+def handle_join(event):
+    with ApiClient(configuration) as api_client:
+        line_bot_api = MessagingApi(api_client)
+        line_bot_api.reply_message(
+            welcomeReplyMessage()
+        )
+
+@lineHandler.add(FollowEvent)
+def handle_follow(event):
+    with ApiClient(configuration) as api_client:
+        line_bot_api = MessagingApi(api_client)
+        line_bot_api.reply_message(
+            welcomeReplyMessage()
+        )
 
 @lineHandler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
@@ -132,14 +161,14 @@ def handle_message(event):
                                 columns=[
                                     CarouselColumn(
                                         title=f"{shop['cName']}",
-                                        text=f"{shop['cName']}",
+                                        text=f"{shop['cName']}\n預計等候時間{getShopStatus(shopId=shop['storeId'])[0]['wait_time']}分鐘",
                                         actions=[
                                             MessageAction(label="建立此店通知", text=f"/createShop {shop['storeId']}")
                                         ]
                                     ) for shop in store[:10]
                                 ] 
                             ),
-                        quick_reply=get_quick_reply_menu()
+                            quick_reply=get_quick_reply_menu()
                         )
                     ]
                 )
@@ -182,6 +211,7 @@ def handle_message(event):
             # Create notification, set user No
             shop_id = text.split(" ")[1]
             seatType = text.split(" ")[2]
+            seatTypeId = 1 if seatType == "1~2" else 2 if seatType == "3~4" else 3 if seatType == "5~6" else 4 if seatType == "7" else 0
             shop = next((shop for shop in store if shop["storeId"] == shop_id), None)
             if not shop:
                 line_bot_api.reply_message(
@@ -196,12 +226,13 @@ def handle_message(event):
                     )
                 )
             else:
-                user["notifies"].append({
+                tempNotify = {
                     "shopId": shop_id,
                     "shopName": shop["cName"],
+                    "seatTypeId": seatTypeId,
                     "seatType": seatType
-                })
-                update_user(user_id, {"notifies": user["notifies"]})
+                }
+                update_user(user_id, {"tempNotify": tempNotify})
                 line_bot_api.reply_message(
                     ReplyMessageRequest(
                         reply_token=event.reply_token,
@@ -241,14 +272,14 @@ def handle_message(event):
                                     columns=[
                                         CarouselColumn(
                                             title=f"{notify['shopName']}",
-                                            text=f"{notify['seatNo']} {getShopStatus(shopId=notify['shopId'])[0]['wait_time']}",
+                                            text=f"目前{notify['seatType']}座位\n登記號碼為:{seatNo}\n目前叫號為:{getShopStatus(shopId=notify['shopId'])[0]['num_'+str(notify['seatTypeId'])]}",
                                             actions=[
-                                                MessageAction(label="刪除通知目標", text=f"/delete {notify['shopId']} {notify['seatNo']}")
+                                                MessageAction(label="刪除通知目標", text=f"/delete {notify['shopId']} {seatNo}")
                                             ]
-                                        ) for notify in notifies
+                                        ) for seatNo, notify in notifies.items()
                                     ] 
                                 ),
-                            quick_reply=get_quick_reply_menu()
+                                quick_reply=get_quick_reply_menu()
                             )
                         ]
                     )
@@ -257,38 +288,54 @@ def handle_message(event):
         if text.startswith("/delete"):
             # Delete notification
             return
-        if any([not notify.get('seatNo', False) for notify in user['notifies']]):
-            notify = next((notify for notify in user['notifies'] if not notify.get('seatNo', False)), None)
-            print(notify)
-            seatNo = text
-            if isinstance(seatNo, str):
-                try:
-                    seatNo = int(seatNo)
-                except:
-                    line_bot_api.reply_message(
-                        ReplyMessageRequest(
-                            reply_token=event.reply_token,
-                            messages=[
-                                TextMessage(
-                                    text="請輸入數字",
-                                    quickReply=get_quick_reply_menu()
-                                ),
-                            ]
-                        )
+
+        if user['tempNotify']:
+            try:
+                seatNo = str(text)
+                notify = user['tempNotify']
+                notifies = user["notifies"]
+                notifies[seatNo] = notify
+                update_user(user_id, {
+                    "notifies" : notifies,
+                    "tempNotify": None
+                })
+                line_bot_api.reply_message(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[
+                            TextMessage(
+                                text="建立成功",
+                                quickReply=get_quick_reply_menu()
+                            ),
+                        ]
                     )
-            notify['seatNo'] = seatNo
-            update_user(user_id, {"notifies": user["notifies"]})
-            line_bot_api.reply_message(
-                ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[
-                        TextMessage(
-                            text="建立成功",
-                            quickReply=get_quick_reply_menu()
-                        ),
-                    ]
                 )
+            except Exception as e:
+                line_bot_api.reply_message(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[
+                            TextMessage(
+                                text=f"建立失敗:{str(e)}",
+                                quickReply=get_quick_reply_menu()
+                            ),
+                        ]
+                    )
+                )
+            return
+        
+        line_bot_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[
+                    TextMessage(
+                        text=text,
+                        quickReply=get_quick_reply_menu()
+                    ),
+                ]
             )
+        )
+
 
 
 
