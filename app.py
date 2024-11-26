@@ -42,7 +42,11 @@ lineHandler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET', None))
 
 @app.route("/api/cron")
 def cron():
-    cronJob()
+    try:
+        cronJob()
+        return "Success"
+    except:
+        return "Fail"
 
 @app.route("/")
 def index():
