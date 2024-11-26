@@ -10,5 +10,11 @@
             "src": "/(.*)", 
             "dest": "app.py"
         }
+    ],
+    "crons": [
+        {
+            "path": "dintaifung_waiting/waiting.py",
+            "schedule": "* 9-22 * * *"
+        }
     ]
 }

@@ -18,8 +18,6 @@ from linebot.v3.messaging import (
     CarouselColumn,
     TemplateMessage,
     TextMessage,
-    QuickReply,
-    QuickReplyItem,
     MessageAction,
 )
 from linebot.v3.webhooks import (
@@ -31,7 +29,7 @@ from linebot.v3.webhooks import (
 
 from db import users_collection
 from store import store
-from waiting import getShopStatus
+from utils import getShopStatus, get_quick_reply_menu
 
 load_dotenv()
 
@@ -93,25 +91,6 @@ def callback():
         abort(400)
 
     return 'OK'
-
-def get_quick_reply_menu():
-    quick_reply = QuickReply(
-        items=[
-            # QuickReplyItem(
-            #     action=MessageAction(label="查看狀態", text="/status")
-            # ),
-            QuickReplyItem(
-                action=MessageAction(label="建立通知目標", text="/create")
-            ),
-            QuickReplyItem(
-                action=MessageAction(label="顯示通知清單", text="/list")
-            ),
-            # QuickReplyItem(
-            #     action=MessageAction(label="刪除通知目標", text="/delete")
-            # ),
-        ]
-    )
-    return quick_reply
 
 def welcomeReplyMessage():
     return ReplyMessageRequest(
@@ -247,7 +226,10 @@ def handle_message(event):
             return
         if text == "/list":
             # Show notification list
-            notifies = user["notifies"]
+            notifies = {}
+            for shopNotifies in user["notifies"].values():
+                for seatNo, notify in shopNotifies.items():
+                    notifies[seatNo] = notify
             if not notifies:
                 line_bot_api.reply_message(
                     ReplyMessageRequest(
@@ -293,8 +275,11 @@ def handle_message(event):
             try:
                 seatNo = str(text)
                 notify = user['tempNotify']
-                notifies = user["notifies"]
-                notifies[seatNo] = notify
+                for t in ['5', '3', '1', 'passed']:
+                    notify[t] = False
+                shopId = notify['shopId']                    
+                notifies = user.get('notifies', {shop['storeId']:{} for shop in store})
+                notifies[shopId][seatNo] = notify
                 update_user(user_id, {
                     "notifies" : notifies,
                     "tempNotify": None
@@ -311,6 +296,7 @@ def handle_message(event):
                     )
                 )
             except Exception as e:
+                print(e)
                 line_bot_api.reply_message(
                     ReplyMessageRequest(
                         reply_token=event.reply_token,
