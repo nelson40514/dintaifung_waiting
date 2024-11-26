@@ -40,7 +40,7 @@ configuration = Configuration(access_token=os.getenv('LINE_CHANNEL_ACCESS_TOKEN'
 lineHandler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET', None))
 
 
-@app.route("/api.cron")
+@app.route("/api/cron")
 def cron():
     cronJob()
 
