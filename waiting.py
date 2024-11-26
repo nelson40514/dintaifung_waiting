@@ -2,9 +2,8 @@ import json
 
 
 from db import users_collection
-from app import get_quick_reply_menu
 from store import store
-from utils import sendNotify, getShopStatus
+from utils import sendNotify, getShopStatus, get_quick_reply_menu
 
 def cronJob():
     store_time_data = {shop["storeId"]:getShopStatus(shopId=shop["storeId"])[0] for shop in store}
