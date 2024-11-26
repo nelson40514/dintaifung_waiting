@@ -30,6 +30,7 @@ from linebot.v3.webhooks import (
 from db import users_collection
 from store import store
 from utils import getShopStatus, get_quick_reply_menu
+from waiting import cronJob
 
 load_dotenv()
 
@@ -38,6 +39,10 @@ app = Flask(__name__)
 configuration = Configuration(access_token=os.getenv('LINE_CHANNEL_ACCESS_TOKEN', None))
 lineHandler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET', None))
 
+
+@app.route("/api.cron")
+def cron():
+    cronJob()
 
 @app.route("/")
 def index():

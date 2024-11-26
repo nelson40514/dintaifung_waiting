@@ -13,7 +13,7 @@
     ],
     "crons": [
         {
-            "path": "dintaifung_waiting/waiting.py",
+            "path": "/api/cron",
             "schedule": "* 9-22 * * *"
         }
     ]
