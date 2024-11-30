@@ -278,6 +278,53 @@ def handle_message(event):
             return
         if text.startswith("/delete"):
             # Delete notification
+            notifies = user.get('notifies', {})
+            shopId = text.split(" ")[1]
+            shop = notifies.get(shopId, {})
+            print(f"shop: {shop}")
+            if not shop:
+                line_bot_api.reply_message(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[
+                            TextMessage(
+                                text="找不到此店",
+                                quickReply=get_quick_reply_menu()
+                            ),
+                        ]
+                    )
+                )
+                return
+            
+            seatNo = text.split(" ")[2]
+            seat = shop.get(seatNo, {})
+            if not seat:
+                line_bot_api.reply_message(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[
+                            TextMessage(
+                                text="找不到此預約",
+                                quickReply=get_quick_reply_menu()
+                            ),
+                        ]
+                    )
+                )
+                return
+            
+            del shop[seatNo]
+            update_user(user_id, {"notifies": notifies})
+            line_bot_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[
+                        TextMessage(
+                            text="刪除成功",
+                            quickReply=get_quick_reply_menu()
+                        ),
+                    ]
+                )
+            )
             return
 
         if user['tempNotify']:
@@ -324,7 +371,7 @@ def handle_message(event):
                 reply_token=event.reply_token,
                 messages=[
                     TextMessage(
-                        text=text,
+                        text=f"輸入:{text}，可能輸入錯誤",
                         quickReply=get_quick_reply_menu()
                     ),
                 ]
