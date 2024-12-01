@@ -7,13 +7,13 @@ from utils import sendNotify, getShopStatus, get_quick_reply_menu
 
 def cronJob():
     startTime = time.time()
+    print(f"start time:{time.time()-startTime}")
     store_time_data = {shop["storeId"]:getShopStatus(shopId=shop["storeId"])[0] for shop in store}
 
     # print(json.dumps(store_time_data, indent=2 , ensure_ascii=False))
-    print(f"start time:{time.time()-startTime}")
+    print(f"After fetch data time:{time.time()-startTime}")
     for user in users_collection.find():
-        print(user)
-        print(f"time:{time.time()-startTime}")
+        print(f"User ({user.get('line_user_id')}) time:{time.time()-startTime}")
         notifies = user.get('notifies', {})
         for notifyShop in notifies:
             for seatNo, notify in notifies[notifyShop].items():
