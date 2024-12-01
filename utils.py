@@ -61,5 +61,5 @@ def getShopStatus(shopId="0001"):
 
     res = post(url, data=parameter)
 
-    print(res.json())
+    # print(res.json())
     return res.json()

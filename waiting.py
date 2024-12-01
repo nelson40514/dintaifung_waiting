@@ -9,8 +9,8 @@ def cronJob():
     startTime = time.time()
     store_time_data = {shop["storeId"]:getShopStatus(shopId=shop["storeId"])[0] for shop in store}
 
-    print(json.dumps(store_time_data, indent=2 , ensure_ascii=False))
-    print(f"time:{time.time()-startTime}")
+    # print(json.dumps(store_time_data, indent=2 , ensure_ascii=False))
+    print(f"start time:{time.time()-startTime}")
     for user in users_collection.find():
         print(user)
         print(f"time:{time.time()-startTime}")
