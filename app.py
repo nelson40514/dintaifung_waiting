@@ -1,4 +1,6 @@
 import os
+import json
+
 from datetime import datetime
 from dotenv import load_dotenv
 from flask import Flask, request, abort
@@ -139,6 +141,7 @@ def handle_message(event):
         if text == "/create":
             # Ask shop position
             allShopStatus = getAllShopStatus()
+            print(json.dumps(store))
             line_bot_api.reply_message(
                 ReplyMessageRequest(
                     reply_token=event.reply_token,
@@ -150,7 +153,7 @@ def handle_message(event):
                                 columns=[
                                     CarouselColumn(
                                         title=f"{shop['cName']}",
-                                        text=f"{shop['cName']}\n預計等候時間{allShopStatus['storeId']['wait_time']}分鐘",
+                                        text=f"{shop['cName']}\n預計等候時間{allShopStatus[shop['storeId']]['wait_time']}分鐘",
                                         actions=[
                                             MessageAction(label="建立此店通知", text=f"/createShop {shop['storeId']}")
                                         ]
@@ -167,8 +170,20 @@ def handle_message(event):
             # Ask seat position
             shop_id = text.split(" ")[1]
             shop = next((shop for shop in store if shop["storeId"] == shop_id), None)
+            if not shop:
+                line_bot_api.reply(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[
+                            TextMessage(
+                                text="找不到此店",
+                                quickReply=get_quick_reply_menu()
+                            ),
+                        ]
+                    )
+                )
             tableType = shop["tableType"]
-            shopStatus = getAllShopStatus().get('storeId', {})
+            shopStatus = getAllShopStatus().get(shop['storeId'], {})
             line_bot_api.reply_message(
                 ReplyMessageRequest(
                     reply_token=event.reply_token,
@@ -236,13 +251,14 @@ def handle_message(event):
             for shopNotifies in user["notifies"].values():
                 for seatNo, notify in shopNotifies.items():
                     notifies[seatNo] = notify
-            if not notifies:
+            print(notifies)
+            if not notifies or all([notify.get('passed', False) for notify in notifies.values()]):
                 line_bot_api.reply_message(
                     ReplyMessageRequest(
                         reply_token=event.reply_token,
                         messages=[
                             TextMessage(
-                                text="沒有任何通知目標",
+                                text="沒有任何未通知的通知目標",
                                 quickReply=get_quick_reply_menu()
                             ),
                         ]
@@ -261,7 +277,7 @@ def handle_message(event):
                                     columns=[
                                         CarouselColumn(
                                             title=f"{notify['shopName']}",
-                                            text=f"目前{notify['seatType']}座位\n登記號碼為:{seatNo}\n目前叫號為:{allShopStatus['shopId']['num_'+str(notify['seatTypeId'])]}",
+                                            text=f"目前{notify['seatType']}座位\n登記號碼為:{seatNo}\n目前叫號為:{allShopStatus[notify['shopId']]['num_'+str(notify['seatTypeId'])]}",
                                             actions=[
                                                 MessageAction(label="刪除通知目標", text=f"/delete {notify['shopId']} {seatNo}")
                                             ]
