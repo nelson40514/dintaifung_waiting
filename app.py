@@ -268,6 +268,7 @@ def handle_message(event):
                                                 MessageAction(label="刪除通知目標", text=f"/delete {notify['shopId']} {seatNo}")
                                             ]
                                         ) for seatNo, notify in notifies.items()
+                                        if notify.get('passed', False) == False
                                     ] 
                                 ),
                                 quick_reply=get_quick_reply_menu()
