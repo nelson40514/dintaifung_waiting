@@ -74,7 +74,7 @@ def get_or_create_user(line_user_id):
             "line_user_id": line_user_id,
             "created_at": datetime.now(),
             "updated_at": datetime.now(),
-            "notifies": {}
+            "notifies": {shop['storeId']:{} for shop in store}
         }
         users_collection.insert_one(user)
     return user
