@@ -1,4 +1,6 @@
 import os
+import json
+import threading
 
 from dotenv import load_dotenv
 from requests import post
@@ -54,12 +56,31 @@ def sendNotify(user_id, text="Notify"):
             )
         )
 
+shopStatus = {shop["storeId"]:{} for shop in store}
 
-def getShopStatus(shopId="0001"):
+def updateShopStatus(shopId="0001"):
     url = 'https://www.dintaifung.tw/Queue/Home/WebApiTest'
     parameter = {"storeid":shopId}
 
     res = post(url, data=parameter)
 
-    # print(res.json())
-    return res.json()
+    shop = res.json()
+    try:
+        shopStatus[shopId] = shop[0]
+    except:
+        pass
+    return shop
+
+def getAllShopStatus():
+    threads = []
+    for shop in store:
+        t = threading.Thread(target=updateShopStatus, args=(shop["storeId"],))
+        threads.append(t)
+        t.start()
+    for t in threads:
+        t.join()
+    return shopStatus
+
+if __name__ == "__main__":
+    [updateShopStatus(item) for item in ['0001','0003']]
+    print(json.dumps(shopStatus,indent=2))

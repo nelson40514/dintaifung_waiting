@@ -3,12 +3,12 @@ import time
 
 from db import users_collection
 from store import store
-from utils import sendNotify, getShopStatus, get_quick_reply_menu
+from utils import sendNotify, getAllShopStatus, get_quick_reply_menu
 
 def cronJob():
     startTime = time.time()
     print(f"start time:{time.time()-startTime}")
-    store_time_data = {shop["storeId"]:getShopStatus(shopId=shop["storeId"])[0] for shop in store}
+    store_time_data = getAllShopStatus()
 
     # print(json.dumps(store_time_data, indent=2 , ensure_ascii=False))
     print(f"After fetch data time:{time.time()-startTime}")

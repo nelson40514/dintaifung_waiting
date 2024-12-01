@@ -29,7 +29,7 @@ from linebot.v3.webhooks import (
 
 from db import users_collection
 from store import store
-from utils import getShopStatus, get_quick_reply_menu
+from utils import getAllShopStatus, get_quick_reply_menu
 from waiting import cronJob
 
 load_dotenv()
@@ -138,6 +138,7 @@ def handle_message(event):
         line_bot_api = MessagingApi(api_client)
         if text == "/create":
             # Ask shop position
+            allShopStatus = getAllShopStatus()
             line_bot_api.reply_message(
                 ReplyMessageRequest(
                     reply_token=event.reply_token,
@@ -149,7 +150,7 @@ def handle_message(event):
                                 columns=[
                                     CarouselColumn(
                                         title=f"{shop['cName']}",
-                                        text=f"{shop['cName']}\n預計等候時間{getShopStatus(shopId=shop['storeId'])[0]['wait_time']}分鐘",
+                                        text=f"{shop['cName']}\n預計等候時間{allShopStatus['storeId']['wait_time']}分鐘",
                                         actions=[
                                             MessageAction(label="建立此店通知", text=f"/createShop {shop['storeId']}")
                                         ]
@@ -167,11 +168,7 @@ def handle_message(event):
             shop_id = text.split(" ")[1]
             shop = next((shop for shop in store if shop["storeId"] == shop_id), None)
             tableType = shop["tableType"]
-            try:
-                shopStatus = getShopStatus(shopId=shop_id)
-                shopStatus = shopStatus[0]
-            except:
-                shopStatus = {}
+            shopStatus = getAllShopStatus().get('storeId', {})
             line_bot_api.reply_message(
                 ReplyMessageRequest(
                     reply_token=event.reply_token,
@@ -252,6 +249,7 @@ def handle_message(event):
                     )
                 )
             else:
+                allShopStatus = getAllShopStatus()
                 line_bot_api.reply_message(
                     ReplyMessageRequest(
                         reply_token=event.reply_token,
@@ -263,7 +261,7 @@ def handle_message(event):
                                     columns=[
                                         CarouselColumn(
                                             title=f"{notify['shopName']}",
-                                            text=f"目前{notify['seatType']}座位\n登記號碼為:{seatNo}\n目前叫號為:{getShopStatus(shopId=notify['shopId'])[0]['num_'+str(notify['seatTypeId'])]}",
+                                            text=f"目前{notify['seatType']}座位\n登記號碼為:{seatNo}\n目前叫號為:{allShopStatus['shopId']['num_'+str(notify['seatTypeId'])]}",
                                             actions=[
                                                 MessageAction(label="刪除通知目標", text=f"/delete {notify['shopId']} {seatNo}")
                                             ]
