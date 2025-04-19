@@ -161,6 +161,21 @@ def handle_message(event):
                                 ] 
                             ),
                             quick_reply=get_quick_reply_menu()
+                        ),
+                        TemplateMessage(
+                            altText="店家清單（續）",
+                            template=CarouselTemplate(
+                                columns=[
+                                    CarouselColumn(
+                                        title=f"{shop['cName']}",
+                                        text=f"{shop['cName']}\n預計等候時間{allShopStatus[shop['storeId']]['wait_time']}分鐘",
+                                        actions=[
+                                            MessageAction(label="建立此店通知", text=f"/createShop {shop['storeId']}")
+                                        ]
+                                    ) for shop in store[10:]
+                                ] 
+                            ),
+                            quick_reply=get_quick_reply_menu()
                         )
                     ]
                 )
